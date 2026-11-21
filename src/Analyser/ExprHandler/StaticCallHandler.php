@@ -381,7 +381,7 @@ final class StaticCallHandler implements ExprHandler
 					!$methodReflection->isStatic()
 					&& $methodReflection->getName() === '__construct'
 				)
-				|| $methodReflection->hasSideEffects()->yes()
+				|| $methodReflection->getSideEffects()->has('writes-this')->or($methodReflection->getSideEffects()->has('writes-global'))->yes()
 			)
 			&& $scope->isInClass()
 			&& $scope->getClassReflection()->is($methodReflection->getDeclaringClass()->getName())

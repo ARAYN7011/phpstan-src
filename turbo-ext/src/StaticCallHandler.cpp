@@ -677,9 +677,9 @@ public:
 				if (!isStatic && UNEXPECTED(!isConstructorName(methodReflection.raw(), invalidate))) return zv::Val();
 			}
 			if (!invalidate) {
-				zend_long hasSideEffects = reflectionTrinary(methodReflection.raw(), PT_MR_HAS_SIDE_EFFECTS);
-				if (UNEXPECTED(hasSideEffects < 0)) return zv::Val();
-				invalidate = hasSideEffects == PT_TRI_YES;
+				zend_long writesReceiver = pt_method_reflection_writes_receiver(methodReflection.raw());
+				if (UNEXPECTED(writesReceiver < 0)) return zv::Val();
+				invalidate = writesReceiver == PT_TRI_YES;
 			}
 			if (invalidate && UNEXPECTED(!scopeClassIsDeclaringClass(currentScope.raw(), methodReflection.raw(), invalidate))) return zv::Val();
 			if (invalidate) {

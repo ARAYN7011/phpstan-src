@@ -8973,6 +8973,7 @@ $observations['native ' . \PHPStan\Reflection\SideEffects::class] = (new Reflect
 	$viewSideEffects = static fn (\PHPStan\Reflection\SideEffects $sideEffects): array => [
 		$view($sideEffects->hasAny()),
 		$view($sideEffects->isDeterministic()),
+		array_map(static fn (string $effect) => $view($sideEffects->has($effect)), ['io', 'io.files', 'io.files.local', 'nondeterministic', 'writes-this', 'sleep', 'i', '']),
 		$sideEffects->getEffectNames(),
 		array_map($view, $sideEffects->getCalledParameters()),
 		array_map($view, $sideEffects->getWrittenParameters()),
@@ -8993,6 +8994,9 @@ $observations['native ' . \PHPStan\Reflection\SideEffects::class] = (new Reflect
 		'create nondeterministic' => static fn () => \PHPStan\Reflection\SideEffects::create(['nondeterministic'], $no),
 		'create nondeterministic sub' => static fn () => \PHPStan\Reflection\SideEffects::create(['io.files', 'nondeterministic.time'], $no),
 		'create nondeterministic prefix only' => static fn () => \PHPStan\Reflection\SideEffects::create(['nondeterministicish'], $no),
+		'create parent effect' => static fn () => \PHPStan\Reflection\SideEffects::create(['io', 'writes-this'], $no),
+		'create parent effect yes' => static fn () => \PHPStan\Reflection\SideEffects::create(['io'], $yes),
+		'create writes-args' => static fn () => \PHPStan\Reflection\SideEffects::create(['writes-args'], $no, [], ['other' => $no]),
 	];
 	foreach (['var_dump', 'str_replace', 'array_map', 'array_udiff', 'strlen', 'usleep', 'print_r'] as $functionName) {
 		$sideEffectsSubjects["function $functionName"] = static fn () => $stringReflectionProvider->getFunction(new \PhpParser\Node\Name($functionName), null)->getSideEffects();

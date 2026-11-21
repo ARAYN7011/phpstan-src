@@ -321,7 +321,9 @@ final class MethodCallHandler implements ExprHandler
 				$throwPoints[] = $methodThrowPoint;
 			}
 
-			if ($methodReflection->getName() === '__construct' || $methodReflection->hasSideEffects()->yes()) {
+			// the receiver's state: the object itself, or the static properties of its class
+			$sideEffects = $methodReflection->getSideEffects();
+			if ($methodReflection->getName() === '__construct' || $sideEffects->has('writes-this')->or($sideEffects->has('writes-global'))->yes()) {
 				$nodeScopeResolver->callNodeCallback($nodeCallback, new InvalidateExprNode($normalizedExpr->var), $scope, $storage);
 				$scope = $scope->invalidateExpression($normalizedExpr->var, true, $methodReflection->getDeclaringClass(), $methodReflection->isStatic());
 			}

@@ -444,9 +444,9 @@ public:
 			if (UNEXPECTED(methodName.isUndef())) return zv::Val();
 			bool invalidate = Z_TYPE_P(methodName.raw()) == IS_STRING && zend_string_equals_literal(Z_STR_P(methodName.raw()), "__construct");
 			if (!invalidate) {
-				zend_long hasSideEffects = reflectionTrinary(methodReflection.raw(), PT_MR_HAS_SIDE_EFFECTS);
-				if (UNEXPECTED(hasSideEffects < 0)) return zv::Val();
-				invalidate = hasSideEffects == PT_TRI_YES;
+				zend_long writesReceiver = pt_method_reflection_writes_receiver(methodReflection.raw());
+				if (UNEXPECTED(writesReceiver < 0)) return zv::Val();
+				invalidate = writesReceiver == PT_TRI_YES;
 			}
 			if (invalidate) {
 				zval *normalizedVar = exprVar(normalizedExpr.raw());
