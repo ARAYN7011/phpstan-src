@@ -53,7 +53,7 @@ final class FileCacheStorageBench
 	 * @throws DirectoryCreatorException
 	 */
 	#[DataProvider(method: 'entries')]
-	#[ExpectedFor(dataSet: 'entries-100', instructions: '246.5K', cycles: '582.7K', memory: '17.29KiB')]
+	#[ExpectedFor(dataSet: 'entries-100', instructions: '233.9K', cycles: '547.2K', memory: '17.29KiB')]
 	#[ExpectedFor(dataSet: 'entries-10000', instructions: '18.84M', cycles: '29.57M', memory: '1.345MiB')]
 	public function benchSave(int $entries): void
 	{
