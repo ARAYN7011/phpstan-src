@@ -541,6 +541,11 @@ public:
 				zend_long sideEffectsValue = trinaryOf(sideEffects, "no");
 				if (UNEXPECTED(sideEffectsValue < 0)) return zv::Val();
 				invalidateVolatile = sideEffectsValue != PT_TRI_NO;
+			} else {
+				/* a built-in forgets global state only when it lists writes-global, not when it is unclassified */
+				int writesGlobal = pt_function_reflection_lists_writes_global(functionReflection);
+				if (UNEXPECTED(writesGlobal < 0)) return zv::Val();
+				invalidateVolatile = writesGlobal == 1;
 			}
 		} else {
 			invalidateVolatile = !pureCallable;

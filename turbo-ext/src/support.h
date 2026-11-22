@@ -2554,6 +2554,13 @@ zend_long pt_side_effects_is_deterministic(zend_object *sideEffects);
  * $methodReflection->getSideEffects() as PT_TRI_*; -1 = pending exception */
 zend_long pt_method_reflection_writes_receiver(zval *methodReflection);
 zend_long pt_method_reflection_result_varies(zval *methodReflection);
+/* $functionReflection->getSideEffects()->has('reads-global') as PT_TRI_*;
+ * -1 = pending exception */
+zend_long pt_function_reflection_reads_global(zval *functionReflection);
+/* in_array('writes-global', $reflection->getSideEffects()->getEffectNames(), true)
+ * of a FunctionReflection / an ExtendedMethodReflection as 1 / 0; -1 = pending exception */
+int pt_function_reflection_lists_writes_global(zval *functionReflection);
+int pt_method_reflection_lists_writes_global(zval *methodReflection);
 
 /* }}} */
 
@@ -4023,6 +4030,8 @@ zv::Val pt_assertions_get_asserts(zval *assertions, int which);
 bool pt_volatile_expression_helper_invalidate_volatile_function_calls(zval *expressionTypes, zval *nativeExpressionTypes);
 bool pt_volatile_expression_helper_invalidate_superglobals(zval *expressionTypes, zval *nativeExpressionTypes);
 zv::Val pt_volatile_expression_helper_invalidate_negative_existence_checks(zval *scope, zval *expressionTypes, zval *nativeExpressionTypes, HashTable *functionNames, zend_string *declaredSymbolName);
+/* invalidateGlobalStateReads(); UNDEF = pending exception */
+zv::Val pt_volatile_expression_helper_invalidate_global_state_reads(zval *scope, zval *reflectionProvider, zval *expressionTypes, zval *nativeExpressionTypes);
 
 /* PhpClassReflectionExtension.cpp — $extension->hasProperty($classReflection,
  * $name) / ->getNativeProperty() / ->hasMethod() / ->getMethod() /

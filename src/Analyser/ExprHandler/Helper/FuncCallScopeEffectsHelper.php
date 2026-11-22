@@ -368,6 +368,8 @@ final class FuncCallScopeEffectsHelper
 			&& count($parametersAcceptor->getImpurePoints()) === 0;
 		if (
 			($functionReflection !== null && !$functionReflection->isBuiltin() && !$functionReflection->hasSideEffects()->no())
+			// a built-in forgets global state only when it lists writes-global, not when it is unclassified
+			|| ($functionReflection !== null && $functionReflection->isBuiltin() && in_array('writes-global', $functionReflection->getSideEffects()->getEffectNames(), true))
 			|| ($functionReflection === null && !$pureCallable)
 		) {
 			$scope = $scope->invalidateVolatileExpressions();

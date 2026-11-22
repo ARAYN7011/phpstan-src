@@ -1659,6 +1659,14 @@ public:
 		zv::Val existence = pt_volatile_expression_helper_invalidate_negative_existence_checks(thisZval(), tables.expressionTypes.raw(), tables.nativeExpressionTypes.raw(), NULL, NULL);
 		if (UNEXPECTED(existence.isUndef())) return zv::Val();
 		changed = zend_is_true(existence.raw()) || changed;
+		zv::Ref reflectionProvider = service(PT_MSS_REFLECTION_PROVIDER);
+		if (UNEXPECTED(!reflectionProvider.isObject())) {
+			(void) uninitializedProperty("reflectionProvider");
+			return zv::Val();
+		}
+		zv::Val globalStateReads = pt_volatile_expression_helper_invalidate_global_state_reads(thisZval(), reflectionProvider.raw(), tables.expressionTypes.raw(), tables.nativeExpressionTypes.raw());
+		if (UNEXPECTED(globalStateReads.isUndef())) return zv::Val();
+		changed = zend_is_true(globalStateReads.raw()) || changed;
 
 		if (!changed) return self_();
 		return createWithTables(tables);

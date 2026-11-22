@@ -507,6 +507,10 @@ public:
 				zend_long hasSideEffects = reflectionTrinary(methodReflection.raw(), PT_MR_HAS_SIDE_EFFECTS);
 				if (UNEXPECTED(hasSideEffects < 0)) return zv::Val();
 				invalidateVolatile = hasSideEffects != PT_TRI_NO;
+			} else {
+				int writesGlobal = pt_method_reflection_lists_writes_global(methodReflection.raw());
+				if (UNEXPECTED(writesGlobal < 0)) return zv::Val();
+				invalidateVolatile = writesGlobal == 1;
 			}
 		}
 		if (invalidateVolatile) {
