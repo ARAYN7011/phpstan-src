@@ -269,11 +269,15 @@ final class StaticCallHandler implements ExprHandler
 		$scope = $argsResult->getScope();
 		$this->argumentsHandler->processDroppedArgs($nodeScopeResolver, $stmt, $expr, $normalizedExpr, $scope, $storage, $context);
 
+		// the side effects of this call when an extension describes them,
+		// instead of the ones of the method reflection
+		$callSideEffects = null;
 		if ($methodReflection !== null) {
 			// created after the args were processed - the pure-unless-callable-
 			// is-impure parameters read an argument's type, which is only
 			// available once its result is stored
-			$impurePoint = SimpleImpurePoint::createFromVariant($methodReflection, $parametersAcceptor, $scope, $expr->getArgs(), $this->dynamicSideEffectsExtensionRegistry->getStaticCallSideEffects($methodReflection, $normalizedExpr, $scope));
+			$callSideEffects = $this->dynamicSideEffectsExtensionRegistry->getStaticCallSideEffects($methodReflection, $normalizedExpr, $scope);
+			$impurePoint = SimpleImpurePoint::createFromVariant($methodReflection, $parametersAcceptor, $scope, $expr->getArgs(), $callSideEffects);
 			if ($impurePoint !== null) {
 				$impurePoints[] = new ImpurePoint($scopeBeforeArgs, $expr, $impurePoint->getIdentifier(), $impurePoint->getDescription(), $impurePoint->isCertain(), $impurePoint->getSideEffects());
 			}
@@ -322,16 +326,17 @@ final class StaticCallHandler implements ExprHandler
 			$resolvedParametersAcceptor,
 			$walkMethodReflection,
 			$specifyContext,
+			$callSideEffects,
 			$argsResult,
 		);
 
 		// A type constraint on a (narrowable, i.e. non-side-effecting) static call
 		// narrows the call itself - the inside-out equivalent of createForExpr's
 		// StaticCall purity gate + tail entry. An impure call narrows to nothing.
-		$createTypesCallback = function (Type $type, TypeSpecifierContext $createContext, bool $nativeTypesPromoted) use ($expr, $classResult, $beforeScope): SpecifiedTypes {
+		$createTypesCallback = function (Type $type, TypeSpecifierContext $createContext, bool $nativeTypesPromoted) use ($expr, $classResult, $beforeScope, $callSideEffects): SpecifiedTypes {
 			$s = $nativeTypesPromoted ? $beforeScope->doNotTreatPhpDocTypesAsCertain() : $beforeScope;
 
-			return $this->isStaticCallNarrowable($s, $expr, $classResult)
+			return $this->isStaticCallNarrowable($s, $expr, $classResult, $callSideEffects)
 				? $this->defaultNarrowingHelper->createSubjectTypes($s, $expr, null, $type, $createContext)
 				: new SpecifiedTypes([], []);
 		};
@@ -384,7 +389,8 @@ final class StaticCallHandler implements ExprHandler
 					!$methodReflection->isStatic()
 					&& $methodReflection->getName() === '__construct'
 				)
-				|| $methodReflection->getSideEffects()->has(SideEffects::WRITES_THIS)->or($methodReflection->getSideEffects()->has(SideEffects::WRITES_GLOBAL))->yes()
+				|| ($callSideEffects ?? $methodReflection->getSideEffects())->has(SideEffects::WRITES_THIS)->yes()
+				|| ($callSideEffects ?? $methodReflection->getSideEffects())->has(SideEffects::WRITES_GLOBAL)->yes()
 			)
 			&& $scope->isInClass()
 			&& $scope->getClassReflection()->is($methodReflection->getDeclaringClass()->getName())
@@ -414,7 +420,10 @@ final class StaticCallHandler implements ExprHandler
 			}
 		}
 
-		if (
+		if ($callSideEffects !== null) {
+			// a call an extension describes forgets the global state it lists, like a built-in
+			$scope = $scope->invalidateGlobalStateWrittenBy($callSideEffects);
+		} elseif (
 			$methodReflection === null
 			|| (!$methodReflection->getDeclaringClass()->isBuiltin() && !$methodReflection->hasSideEffects()->no())
 		) {
@@ -577,7 +586,7 @@ final class StaticCallHandler implements ExprHandler
 	 * @param StaticCall $expr
 	 * @param StaticCall $normalizedExpr
 	 */
-	private function specifyTypes(MutatingScope $scope, Expr $expr, Expr $normalizedExpr, ?ExpressionResult $classResult, ?ParametersAcceptor $resolvedParametersAcceptor, ?ExtendedMethodReflection $walkMethodReflection, TypeSpecifierContext $context, ?ArgsResult $argsResult = null): SpecifiedTypes
+	private function specifyTypes(MutatingScope $scope, Expr $expr, Expr $normalizedExpr, ?ExpressionResult $classResult, ?ParametersAcceptor $resolvedParametersAcceptor, ?ExtendedMethodReflection $walkMethodReflection, TypeSpecifierContext $context, ?SideEffects $callSideEffects, ?ArgsResult $argsResult = null): SpecifiedTypes
 	{
 		if (!$expr->name instanceof Identifier) {
 			return $this->defaultNarrowingHelper->specifyDefaultTypes($expr, $context);
@@ -647,13 +656,13 @@ final class StaticCallHandler implements ExprHandler
 					// see MethodCallHandler::specifyTypes() - the call's own key gets
 					// the purity gate, the asserts narrow their subjects regardless
 					return $specifiedTypes
-						->unionWith($this->defaultStaticCallNarrowing($scope, $expr, $classResult, $context))
+						->unionWith($this->defaultStaticCallNarrowing($scope, $expr, $classResult, $context, $callSideEffects))
 						->setRootExpr($specifiedTypes->getRootExpr());
 				}
 			}
 		}
 
-		return $this->defaultStaticCallNarrowing($scope, $expr, $classResult, $context);
+		return $this->defaultStaticCallNarrowing($scope, $expr, $classResult, $context, $callSideEffects);
 	}
 
 	/**
@@ -666,9 +675,9 @@ final class StaticCallHandler implements ExprHandler
 	 *
 	 * @param StaticCall $expr
 	 */
-	private function defaultStaticCallNarrowing(MutatingScope $scope, Expr $expr, ?ExpressionResult $classResult, TypeSpecifierContext $context): SpecifiedTypes
+	private function defaultStaticCallNarrowing(MutatingScope $scope, Expr $expr, ?ExpressionResult $classResult, TypeSpecifierContext $context, ?SideEffects $callSideEffects): SpecifiedTypes
 	{
-		if (!$this->isStaticCallNarrowable($scope, $expr, $classResult)) {
+		if (!$this->isStaticCallNarrowable($scope, $expr, $classResult, $callSideEffects)) {
 			return (new SpecifiedTypes([], []))->setRootExpr($expr);
 		}
 
@@ -676,7 +685,7 @@ final class StaticCallHandler implements ExprHandler
 	}
 
 	/** @param StaticCall $expr */
-	private function isStaticCallNarrowable(MutatingScope $scope, Expr $expr, ?ExpressionResult $classResult): bool
+	private function isStaticCallNarrowable(MutatingScope $scope, Expr $expr, ?ExpressionResult $classResult, ?SideEffects $callSideEffects): bool
 	{
 		if (!$expr->name instanceof Identifier) {
 			return true;
@@ -696,7 +705,7 @@ final class StaticCallHandler implements ExprHandler
 			return false;
 		}
 
-		$resultVaries = $methodReflection->getSideEffects()->isDeterministic()->negate();
+		$resultVaries = ($callSideEffects ?? $methodReflection->getSideEffects())->isDeterministic()->negate();
 		if ($resultVaries->yes()) {
 			return false;
 		}

@@ -107,11 +107,13 @@ inline constexpr char strings[] =
 	"walkMethodReflection\0" /* 1398 */
 	"PHPStan\\Reflection\\ExtendedMethodReflection\0" /* 1419 */
 	"PHPStan\\Analyser\\TypeSpecifierContext\0" /* 1463 */
-	"null\0" /* 1501 */
-	"PHPStan\\Analyser\\SpecifiedTypes\0" /* 1506 */
-	"specifyTypes\0" /* 1538 */
-	"defaultMethodCallNarrowing\0" /* 1551 */
-	"isMethodCallNarrowable"; /* 1578 */
+	"callSideEffects\0" /* 1501 */
+	"PHPStan\\Reflection\\SideEffects\0" /* 1517 */
+	"null\0" /* 1548 */
+	"PHPStan\\Analyser\\SpecifiedTypes\0" /* 1553 */
+	"specifyTypes\0" /* 1585 */
+	"defaultMethodCallNarrowing\0" /* 1598 */
+	"isMethodCallNarrowable"; /* 1625 */
 inline constexpr reg::PackedArg args[] = {
 	reg::packed(0, 0, 22), /* __construct $calledMethodProcessor */
 	reg::packed(61, 0, 88), /* __construct $methodCallReturnTypeHelper */
@@ -150,16 +152,19 @@ inline constexpr reg::PackedArg args[] = {
 	reg::packed(1371, MAY_BE_NULL, 1243), /* specifyTypes $resolvedParametersAcceptor */
 	reg::packed(1398, MAY_BE_NULL, 1419), /* specifyTypes $walkMethodReflection */
 	reg::packed(1046, 0, 1463), /* specifyTypes $context */
-	reg::packed(1281, MAY_BE_NULL, 1292, false, false, 1501), /* specifyTypes $argsResult */
-	reg::packed(859, 0, 1506), /* specifyTypes return */
+	reg::packed(1501, MAY_BE_NULL, 1517), /* specifyTypes $callSideEffects */
+	reg::packed(1281, MAY_BE_NULL, 1292, false, false, 1548), /* specifyTypes $argsResult */
+	reg::packed(859, 0, 1553), /* specifyTypes return */
 	reg::packed(947, 0, 953), /* defaultMethodCallNarrowing $scope */
 	reg::packed(834, 0, 839), /* defaultMethodCallNarrowing $expr */
 	reg::packed(1202, 0, 1089), /* defaultMethodCallNarrowing $varResult */
 	reg::packed(1046, 0, 1463), /* defaultMethodCallNarrowing $context */
-	reg::packed(859, 0, 1506), /* defaultMethodCallNarrowing return */
+	reg::packed(1501, MAY_BE_NULL, 1517), /* defaultMethodCallNarrowing $callSideEffects */
+	reg::packed(859, 0, 1553), /* defaultMethodCallNarrowing return */
 	reg::packed(947, 0, 953), /* isMethodCallNarrowable $scope */
 	reg::packed(834, 0, 839), /* isMethodCallNarrowable $expr */
 	reg::packed(1202, 0, 1089), /* isMethodCallNarrowable $varResult */
+	reg::packed(1501, MAY_BE_NULL, 1517), /* isMethodCallNarrowable $callSideEffects */
 	reg::packed(859, MAY_BE_BOOL), /* isMethodCallNarrowable return */
 };
 using Sig = reg::Sig<strings, args>;
@@ -171,9 +176,9 @@ inline constexpr sigtab::Sig __construct = { { 822 /* __construct */, 12, 0, 12,
 inline constexpr sigtab::Sig supports = { { 860 /* supports */, 1, 12, 1, 13, ZEND_ACC_PUBLIC } };
 inline constexpr sigtab::Sig processExpr = { { 1123 /* processExpr */, 7, 14, 7, 21, ZEND_ACC_PUBLIC } };
 inline constexpr sigtab::Sig resolveReturnType = { { 1338 /* resolveReturnType */, 7, 22, 7, 29, ZEND_ACC_PRIVATE } };
-inline constexpr sigtab::Sig specifyTypes = { { 1538 /* specifyTypes */, 7, 30, 8, 38, ZEND_ACC_PRIVATE } };
-inline constexpr sigtab::Sig defaultMethodCallNarrowing = { { 1551 /* defaultMethodCallNarrowing */, 4, 39, 4, 43, ZEND_ACC_PRIVATE } };
-inline constexpr sigtab::Sig isMethodCallNarrowable = { { 1578 /* isMethodCallNarrowable */, 3, 44, 3, 47, ZEND_ACC_PRIVATE } };
+inline constexpr sigtab::Sig specifyTypes = { { 1585 /* specifyTypes */, 8, 30, 9, 39, ZEND_ACC_PRIVATE } };
+inline constexpr sigtab::Sig defaultMethodCallNarrowing = { { 1598 /* defaultMethodCallNarrowing */, 5, 40, 5, 45, ZEND_ACC_PRIVATE } };
+inline constexpr sigtab::Sig isMethodCallNarrowable = { { 1625 /* isMethodCallNarrowable */, 4, 46, 4, 50, ZEND_ACC_PRIVATE } };
 } // namespace sig
 
 } // namespace ptdecl::MethodCallHandler
