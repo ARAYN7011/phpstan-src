@@ -511,23 +511,24 @@ public:
 			appendTo(throwPoints, std::move(throwPoint));
 		}
 		bool invalidateVolatile = methodReflection.isNull();
+		bool builtin = false;
 		if (!invalidateVolatile) {
 			zv::Val declaringClass = pt_extended_method_reflection_call(methodReflection.raw(), PT_MR_GET_DECLARING_CLASS);
 			if (UNEXPECTED(declaringClass.isUndef())) return zv::Val();
-			bool builtin;
 			if (UNEXPECTED(!pt_class_reflection_is_builtin(Z_OBJ_P(declaringClass.raw()), builtin))) return zv::Val();
 			if (!builtin) {
 				zend_long hasSideEffects = reflectionTrinary(methodReflection.raw(), PT_MR_HAS_SIDE_EFFECTS);
 				if (UNEXPECTED(hasSideEffects < 0)) return zv::Val();
 				invalidateVolatile = hasSideEffects != PT_TRI_NO;
-			} else {
-				int writesGlobal = pt_method_reflection_lists_writes_global(methodReflection.raw());
-				if (UNEXPECTED(writesGlobal < 0)) return zv::Val();
-				invalidateVolatile = writesGlobal == 1;
 			}
 		}
 		if (invalidateVolatile) {
 			currentScope = pt_mutating_scope_invalidate_volatile_expressions(Z_OBJ_P(currentScope.raw()));
+			if (UNEXPECTED(currentScope.isUndef())) return zv::Val();
+		} else if (builtin) {
+			zv::Val sideEffects = pt_method_reflection_side_effects(methodReflection.raw());
+			if (UNEXPECTED(sideEffects.isUndef())) return zv::Val();
+			currentScope = pt_mutating_scope_invalidate_global_state_written_by(Z_OBJ_P(currentScope.raw()), sideEffects.raw());
 			if (UNEXPECTED(currentScope.isUndef())) return zv::Val();
 		}
 

@@ -42,6 +42,7 @@ use PHPStan\Reflection\MethodReflection;
 use PHPStan\Reflection\ParametersAcceptor;
 use PHPStan\Reflection\ParametersAcceptorSelector;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Reflection\SideEffects;
 use PHPStan\ShouldNotHappenException;
 use PHPStan\Turbo\ShadowedByTurboExtension;
 use PHPStan\Type\DynamicSideEffectsExtensionRegistry;
@@ -383,7 +384,7 @@ final class StaticCallHandler implements ExprHandler
 					!$methodReflection->isStatic()
 					&& $methodReflection->getName() === '__construct'
 				)
-				|| $methodReflection->getSideEffects()->has('writes-this')->or($methodReflection->getSideEffects()->has('writes-global'))->yes()
+				|| $methodReflection->getSideEffects()->has(SideEffects::WRITES_THIS)->or($methodReflection->getSideEffects()->has(SideEffects::WRITES_GLOBAL))->yes()
 			)
 			&& $scope->isInClass()
 			&& $scope->getClassReflection()->is($methodReflection->getDeclaringClass()->getName())
@@ -416,9 +417,10 @@ final class StaticCallHandler implements ExprHandler
 		if (
 			$methodReflection === null
 			|| (!$methodReflection->getDeclaringClass()->isBuiltin() && !$methodReflection->hasSideEffects()->no())
-			|| ($methodReflection->getDeclaringClass()->isBuiltin() && in_array('writes-global', $methodReflection->getSideEffects()->getEffectNames(), true))
 		) {
 			$scope = $scope->invalidateVolatileExpressions();
+		} elseif ($methodReflection->getDeclaringClass()->isBuiltin()) {
+			$scope = $scope->invalidateGlobalStateWrittenBy($methodReflection->getSideEffects());
 		}
 
 		$hasYield = $hasYield || $argsResult->hasYield();

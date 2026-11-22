@@ -156,3 +156,13 @@ function testEnumExistsFalseNotRemembered(): void
 
 	assertType('bool', \enum_exists('Bug8579FalseNotRememberedE'));
 }
+
+/** @param mixed $value */
+function functionWithSomeEffectsListed($value): void
+{
+	// json_encode() lists writes-global.error.json next to unknown others,
+	// so a pure call around it is not remembered either
+	if (strlen((string) json_encode($value)) === 1) {
+		assertType('int<0, max>', strlen((string) json_encode($value)));
+	}
+}
