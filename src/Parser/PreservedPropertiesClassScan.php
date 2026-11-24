@@ -2,12 +2,14 @@
 
 namespace PHPStan\Parser;
 
+use PhpParser\Node;
 use PhpParser\Node\Expr;
 use PHPStan\Analyser\PreservedProperties\PreservedProperties;
 use function array_key_exists;
 use function array_keys;
 use function array_pop;
 use function count;
+use function usort;
 
 /**
  * What PreservedPropertiesVisitor learns about one class while it walks it, and
@@ -119,6 +121,60 @@ final class PreservedPropertiesClassScan
 
 			$node->setAttribute(PreservedPropertiesVisitor::ATTRIBUTE_NAME, $results[$key]);
 		}
+	}
+
+	/**
+	 * Ranks the methods so that each comes after the methods of the class it calls - the
+	 * methods are walked by it, and a call can then use the walk of what it calls. The
+	 * constructor and what it calls come first: the other methods start from the scope the
+	 * constructor ends with. Mutually recursive methods keep their order in the class.
+	 */
+	public function rankMethods(Node\Stmt\ClassLike $node): void
+	{
+		$methods = [];
+		foreach ($node->stmts as $stmt) {
+			if (!$stmt instanceof Node\Stmt\ClassMethod) {
+				continue;
+			}
+			$methods[] = $stmt;
+		}
+		usort($methods, static fn (Node\Stmt\ClassMethod $a, Node\Stmt\ClassMethod $b): int => ($a->name->toLowerString() !== '__construct') <=> ($b->name->toLowerString() !== '__construct'));
+
+		$methodsByName = [];
+		foreach ($methods as $method) {
+			$methodsByName[$method->name->toLowerString()] ??= $method;
+		}
+
+		$rank = 0;
+		$ranked = [];
+		foreach ($methods as $method) {
+			$this->rankMethod($method->name->toLowerString(), $methodsByName, $ranked, $rank);
+			if ($method->hasAttribute(PreservedPropertiesVisitor::RANK_ATTRIBUTE_NAME)) {
+				continue;
+			}
+
+			// a method declared twice
+			$method->setAttribute(PreservedPropertiesVisitor::RANK_ATTRIBUTE_NAME, $rank++);
+		}
+	}
+
+	/**
+	 * @param array<string, Node\Stmt\ClassMethod> $methodsByName
+	 * @param array<string, true> $ranked
+	 */
+	private function rankMethod(string $methodName, array $methodsByName, array &$ranked, int &$rank): void
+	{
+		if (isset($ranked[$methodName])) {
+			return;
+		}
+		$ranked[$methodName] = true;
+		foreach ($this->summaries[$methodName]['calls'] ?? [] as [$kind, $calledMethodName]) {
+			if ($kind === self::CALL_OUTSIDE || !isset($methodsByName[$calledMethodName])) {
+				continue;
+			}
+			$this->rankMethod($calledMethodName, $methodsByName, $ranked, $rank);
+		}
+		$methodsByName[$methodName]->setAttribute(PreservedPropertiesVisitor::RANK_ATTRIBUTE_NAME, $rank++);
 	}
 
 	/**

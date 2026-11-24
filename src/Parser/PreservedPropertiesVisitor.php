@@ -31,6 +31,9 @@ final class PreservedPropertiesVisitor extends NodeVisitorAbstract
 
 	public const ATTRIBUTE_NAME = 'preservedProperties';
 
+	/** Attached to each method of a class: ClassLikeHandler walks the methods by it, callees before their callers. */
+	public const RANK_ATTRIBUTE_NAME = 'calleesFirstRank';
+
 	private ?PreservedPropertiesClassScan $scan = null;
 
 	/** @var list<PreservedPropertiesClassScan|null> scans of the classes enclosing an anonymous class */
@@ -104,6 +107,7 @@ final class PreservedPropertiesVisitor extends NodeVisitorAbstract
 	{
 		if ($node instanceof Node\Stmt\ClassLike) {
 			$this->scan?->annotateCalls();
+			$this->scan?->rankMethods($node);
 			$this->scan = array_pop($this->outerScans);
 			return null;
 		}

@@ -23,7 +23,7 @@ class PrivateCallee
 		$this->baz = true;
 		$this->writeBar();
 		assertType('true', $this->foo);
-		assertType('bool', $this->bar);
+		assertType('false', $this->bar);
 		assertType('true', $this->baz);
 	}
 
@@ -137,7 +137,7 @@ final class FinalClass
 		$this->baz = true;
 		$this->viaPrivate();
 		assertType('true', $this->foo);
-		assertType('bool', $this->bar);
+		assertType('false', $this->bar);
 		assertType('true', $this->baz);
 
 		$this->doNothing();
@@ -176,7 +176,7 @@ class FinalMethod
 		$this->bar = true;
 		$this->writeBar();
 		assertType('true', $this->foo);
-		assertType('bool', $this->bar);
+		assertType('false', $this->bar);
 	}
 
 	final public function writeBar(): void
@@ -229,16 +229,16 @@ final class WriteKinds
 		$this->listed = 1;
 		$this->untouched = 1;
 		$this->writeAll();
-		assertType('int', $this->assign);
+		assertType('2', $this->assign);
 		assertType('int', $this->compound);
 		assertType('int', $this->inc);
 		assertType('int|null', $this->unset);
-		assertType('list<int>', $this->push);
+		assertType('non-empty-list<int>', $this->push);
 		assertType('int', $this->ref);
 		assertType('list<int>', $this->foreachRef);
 		assertType('int', $this->byRefArg);
 		assertType('int', $this->closure);
-		assertType('int', $this->listed);
+		assertType('4', $this->listed);
 		assertType('1', $this->untouched);
 	}
 
@@ -350,7 +350,7 @@ class StaticCalls extends ParentClass
 		$this->baz = true;
 		self::writeBaz();
 		assertType('bool', $this->foo);
-		assertType('bool', $this->baz);
+		assertType('false', $this->baz);
 
 		$this->foo = true;
 		$this->baz = true;
@@ -1116,7 +1116,7 @@ function anonymousClass(): void
 			$this->bar = true;
 			$this->writeBar();
 			assertType('true', $this->foo);
-			assertType('bool', $this->bar);
+			assertType('false', $this->bar);
 		}
 
 		private function writeBar(): void
@@ -1126,4 +1126,60 @@ function anonymousClass(): void
 		}
 
 	};
+}
+
+/** The constructor's callees are walked before it, so their walks narrow and initialize what they assign. */
+class ConstructorCallee
+{
+
+	private int $foo;
+
+	public int $bar;
+
+	public function __construct()
+	{
+		$this->init();
+		assertType('1', $this->foo);
+		$this->initBar();
+		assertType('int', $this->bar);
+	}
+
+	private function init(): void
+	{
+		$this->foo = 1;
+	}
+
+	public function initBar(): void
+	{
+		$this->bar = 2;
+	}
+
+}
+
+/** A possibly impure call that writes a property on some paths forgets it: the walk ends with no type for it. */
+class SometimesWrittenBySelfCall
+{
+
+	private int $foo = 0;
+
+	public function run(): void
+	{
+		$this->foo = 1;
+		self::maybeWrite();
+		assertType('int', $this->foo);
+
+		$this->foo = 1;
+		$this->maybeWrite();
+		assertType('int', $this->foo);
+	}
+
+	private function maybeWrite(): int
+	{
+		if (rand(0, 1) === 1) {
+			$this->foo = 2;
+		}
+
+		return 1;
+	}
+
 }
